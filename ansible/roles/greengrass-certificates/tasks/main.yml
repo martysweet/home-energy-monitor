@@ -1,0 +1,27 @@
+---
+- name: Remove any possible existing certs
+  file:
+    path: /greengrass/certs
+    state: absent
+
+- name: Create the directory
+  file:
+    path: /greengrass/certs
+    state: directory
+
+- name: Copy root-CA file
+  get_url:
+    url: https://www.amazontrust.com/repository/AmazonRootCA1.pem
+    dest: /greengrass/certs/root.ca.pem
+
+- name: Extract certificates
+  unarchive:
+    src: /srv/development/electairconnect-rpi-jessie-config/certificates/{{ target_hostname }}.zip
+    dest: /greengrass/certs
+    group: root
+    owner: root
+
+- name: Restart greengrass
+  service:
+    name: greengrass
+    state: restarted

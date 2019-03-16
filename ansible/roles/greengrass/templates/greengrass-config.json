@@ -1,0 +1,30 @@
+{
+  "coreThing" : {
+    "thingArn" : "{{ iot_thing_arn }}",
+    "iotHost" : "{{ iot_data_endpoint }}",
+    "ggHost" : "{{ iot_greengrass_endpoint }}",
+    "keepAlive" : 600,
+    "iotMqttPort" : 443
+  },
+  "runtime" : {
+    "cgroup" : {
+      "useSystemd" : "yes"
+    }
+  },
+  "managedRespawn" : true,
+  "crypto" : {
+    "principals" : {
+      "SecretsManager" : {
+        "privateKeyPath" : "file:///greengrass/certs/{{ target_hostname }}.private.key"
+      },
+      "IoTCertificate" : {
+        "privateKeyPath" : "file:///greengrass/certs/{{ target_hostname }}.private.key",
+        "certificatePath" : "file:///greengrass/certs/{{ target_hostname }}.cert.pem"
+      }
+    },
+    "caPath" : "file:///greengrass/certs/root.ca.pem"
+  },
+  "system": {
+    "shadowSyncTimeout": 600
+  }
+}

@@ -1,0 +1,8 @@
+- hostname:
+    name: "{{ target_hostname }}"
+
+- name: Add hostname to /etc/hosts
+  lineinfile:
+    dest: /etc/hosts
+    line: "127.0.1.1    {{ target_hostname }}"
+    state: present

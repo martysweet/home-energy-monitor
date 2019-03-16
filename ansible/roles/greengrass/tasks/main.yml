@@ -1,0 +1,100 @@
+---
+- name: Create GreenGrass user
+  user:
+    name: ggc_user
+    state: present
+    system: yes
+
+- name: Create GreenGrass group
+  group:
+    name: ggc_group
+    state: present
+    system: yes
+
+- name: Copy sysctl file
+  copy:
+    src: 98-rpi.conf
+    dest: /etc/sysctl.d/98-rpi.conf
+
+- name: Reload sysctl
+  command: sysctl --system
+
+- name: Ensure kernel is at 4.14.92
+  command: rpi-update 6aec73ed5547e09bea3e20aa2803343872c254b6
+
+- name: Copy the service file
+  copy:
+    src: greengrass.service
+    dest: /lib/systemd/system/greengrass.service
+
+- name: Extract greengrass to /greengrass
+  unarchive:
+    src: greengrass-linux-armv7l-1.7.0.tar.gz
+    dest: /
+    group: root
+    owner: root
+
+- name: Setup the greengrass template
+  template:
+    src: greengrass-config.json
+    dest: /greengrass/config/config.json
+
+# OTA
+- name: Copy the OTA service file
+  copy:
+    src: greengrass-ota.service
+    dest: /lib/systemd/system/greengrass-ota.service
+
+- name: Create scripts directory
+  file:
+    path: /greengrass/usr/scripts
+    state: directory
+
+- name: Copy managed execution scripts
+  copy:
+    src: ota-scripts/
+    dest: /greengrass/usr/scripts/
+    mode: 744
+    owner: root
+
+- name: Enable and start OTA service
+  systemd: name="greengrass-ota.service" enabled=yes state=started
+
+# PIP
+- name: Install python setup
+  apt:
+    name: python-setuptools
+
+- name: Install pip
+  apt:
+    name: python-pip
+
+- name: Install RPi.GPIO for Device Defender
+  pip:
+    name: 'RPi.GPIO'
+
+- name: Install psutil for Device Defender
+  pip:
+    name: psutil
+
+- name: Install cbor for Device Defender
+  pip:
+    name: cbor
+
+- name: Enable service
+  systemd: name="greengrass.service" enabled=yes
+
+- name: Get partition uuid
+  shell: "blkid -o export /dev/mmcblk0p2 | grep PARTUUID"
+  register: part_uuid
+
+- name: Boot cmdline
+  template:
+    src: cmdline.txt
+    dest: /boot/cmdline.txt
+  register: bootcmdline
+
+- name: Reboot the device to ensure all kernel and sysctl options have been applied
+  reboot:
+    reboot_timeout: 600
+  when: bootcmdline.changed

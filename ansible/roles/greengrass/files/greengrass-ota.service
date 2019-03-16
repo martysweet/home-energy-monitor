@@ -1,0 +1,11 @@
+[Unit]
+Description=Greengrass OTA Daemon
+
+[Service]
+Type=forking
+PIDFile=/var/run/ggc-ota.pid
+Restart=on-failure
+ExecStart=/greengrass/ota/ota_agent/ggc-ota
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+---
+
+- name: Apply common configuration
+  hosts: '{{ target_device }}'
+  remote_user: pi
+  sudo: True
+
+
+  roles:
+    - hostname
+    - greengrass
+    - greengrass-certificates
+
