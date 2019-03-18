@@ -16,7 +16,7 @@
 
 - name: Extract certificates
   unarchive:
-    src: /srv/development/electairconnect-rpi-jessie-config/certificates/{{ target_hostname }}.zip
+    src: certificates/{{ target_hostname }}.zip
     dest: /greengrass/certs
     group: root
     owner: root

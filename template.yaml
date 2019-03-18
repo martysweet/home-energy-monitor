@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: IoT -> Lambda -> CloudWatch
+
+Parameters:
+  NotificationEmail:
+    Description: Notification email for missing data events.
+    Type: String
+
+Resources:
+
+  #
+  # Ingestion Functions
+  #
+  TempIngestionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main.handler
+      Runtime: python2.7
+      CodeUri: temp-monitor/lambda/src/
+      Policies:
+        - CloudWatchPutMetricPolicy: {}
+      Events:
+        IoT:
+          Type: IoTRule
+          Properties:
+            AwsIotSqlVersion: 2016-03-23
+            Sql: "SELECT * FROM 'hem/temp'"
+
+  PowerIngestionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main.handler
+      Runtime: python2.7
+      CodeUri: power-monitor/lambda/src/
+      Policies:
+        - CloudWatchPutMetricPolicy: {}
+      Events:
+        IoT:
+          Type: IoTRule
+          Properties:
+            AwsIotSqlVersion: 2016-03-23
+            Sql: "SELECT * FROM 'hem/power'"
+
+  #
+  # Alarm Subscription
+  #
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Endpoint: !Ref NotificationEmail
+          Protocol: email
+
+  #
+  # No data Alarms
+  #
+  TempMissingDataAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref SNSTopic
+      OKActions:
+        - !Ref SNSTopic
+      AlarmDescription: Notify if the device goes offline
+      AlarmName: HEM Temperature Data Missing
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: Device
+          Value: Heatstore
+      EvaluationPeriods: 1
+      MetricName: HeatstoreTop
+      Namespace: House/Monitoring
+      Period: 300
+      Statistic: SampleCount
+      Threshold: 2
+      TreatMissingData: breaching
+
+  PowerMissingDataAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref SNSTopic
+      OKActions:
+        - !Ref SNSTopic
+      AlarmDescription: Notify if the device goes offline
+      AlarmName: HEM Power Data Missing
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: Device
+          Value: PowerMonitor
+      EvaluationPeriods: 1
+      MetricName: Grid
+      Namespace: House/Monitoring
+      Period: 300
+      Statistic: SampleCount
+      Threshold: 2
+      TreatMissingData: breaching
