@@ -4,14 +4,14 @@
 
 EnergyMonitor ct1, ct2, ct3, ct4, ct5;
 boolean CT1, CT2, CT3, CT4, CT5;
+boolean LEDToggle = false;
 
 const float Ical = 45.98; //37.19
 const float Vcal = 103.2;
 const float Pshift = 1.7;
-const int numSamples = 1662;
-const int numHalfWavelengths = 60;
+const int numHalfWavelengths = 300;
 const int sampleTimeout = 2000;
-const int delayBetweenReadings = 5000;
+const int delayBetweenReadings = 10000;
 
 
 typedef struct {
@@ -51,6 +51,10 @@ void setup()
 
 void loop()
 {
+
+  // Flash the LED on every other loop
+  LEDToggle = !LEDToggle;
+  digitalWrite(13, LEDToggle);
 
   // Measure each CT
   ct1.calcVI(numHalfWavelengths, sampleTimeout);
