@@ -11,11 +11,11 @@ os.system('modprobe w1-therm')
 base_dir = '/sys/bus/w1/devices/'
 
 # TODO: Make sensors a deployment string for reusability
-poll_delay = 60
+poll_delay = os.environ['POLL_DELAY']
 sensors = {
-    "top":      "28-01142fed9cbf",
-    "middle":   "28-01143019315f",
-    "bottom":   "28-02131ab8bdaa"
+    "top":      os.environ['SENSOR_TOP_ID'],
+    "middle":   os.environ['SENSOR_MIDDLE_ID'],
+    "bottom":   os.environ['SENSOR_BOTTOM_ID']
 }
 
 # CloudWatch Configuration

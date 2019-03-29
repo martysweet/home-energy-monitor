@@ -2,13 +2,13 @@ from pyModbusTCP.client import ModbusClient
 import time
 import json
 import greengrasssdk
+import os
 
 gg_client = greengrasssdk.client('iot-data')
 
-# TODO Make env var
-host = "192.168.69.11"
-poll_delay = 60
-k = 10                  # Unit of the pulse meter, i.e. K=10L (Litres)
+host = os.environ['MODBUS_HOST']
+poll_delay = os.environ['POLL_DELAY']
+k = os.environ['WATER_METER_K']     # Unit of the pulse meter, i.e. K=10L (Litres)
 
 # Cloudwatch Configuration
 cw_dimensions = [

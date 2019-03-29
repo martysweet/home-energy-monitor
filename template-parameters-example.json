@@ -1,0 +1,42 @@
+[
+  {
+    "ParameterKey": "BTAddress",
+    "ParameterValue": "98:D3:31:F5:C0:FA"
+  },
+  {
+    "ParameterKey": "CoreCertificateArn",
+    "ParameterValue": "arn:aws:iot:eu-west-1:ACCID:cert/CERT"
+  },
+  {
+    "ParameterKey": "NotificationEmail",
+    "ParameterValue": "EMAIL"
+  },
+  {
+    "ParameterKey": "TempBottomSensorAddr",
+    "ParameterValue": "28-02131ab8bdaa"
+  },
+  {
+    "ParameterKey": "TempMiddleSensorAddr",
+    "ParameterValue": "28-01143019315f"
+  },
+  {
+    "ParameterKey": "TempPollDelay",
+    "ParameterValue": "60"
+  },
+  {
+    "ParameterKey": "TempTopSensorAddr",
+    "ParameterValue": "28-01142fed9cbf"
+  },
+  {
+    "ParameterKey": "WaterMeterK",
+    "ParameterValue": "10"
+  },
+  {
+    "ParameterKey": "WaterModbusHost",
+    "ParameterValue": "192.168.1.5"
+  },
+  {
+    "ParameterKey": "WaterPollDelay",
+    "ParameterValue": "60"
+  }
+]

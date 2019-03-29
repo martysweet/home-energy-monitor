@@ -1,49 +1,288 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: IoT -> Lambda -> CloudWatch
+Description: Greengrass to CloudWatch Deployment
 
 Parameters:
   NotificationEmail:
     Description: Notification email for missing data events.
     Type: String
 
+  CoreCertificateArn:
+    Type: String
+    Description: PopulateWithCertificateARN
+
+  BTAddress:
+    Type: String
+    Description: Bluetooth MAC for Power Monitor
+    Default: "98:D3:31:F5:C0:FA"
+
+  TempTopSensorAddr:
+    Type: String
+    Description: Top Sensor ID for One-Wire
+    Default: "28-01142fed9cbf"
+
+  TempMiddleSensorAddr:
+    Type: String
+    Description: Middle Sensor ID for One-Wire
+    Default: "28-01143019315f"
+
+  TempBottomSensorAddr:
+    Type: String
+    Description: Bottom Sensor ID for One-Wire
+    Default: "28-02131ab8bdaa"
+
+  TempPollDelay:
+    Type: String
+    Description: Poll Delay for Temp Gathering
+    Default: 60
+
+  WaterPollDelay:
+    Type: String
+    Description: Poll Delay for Water Gathering
+    Default: 60
+
+  WaterModbusHost:
+    Type: String
+    Description: Host for Modbus Communication
+
+  WaterMeterK:
+    Type: String
+    Description: Water litre multipler for a pulse meter
+    Default: 10
+
 Resources:
 
   #
-  # Ingestion Functions
+  # Ingestion Functions which run on the Greengrass Core
   #
-  TempIngestionFunction:
+  GGHEMTempFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: main.handler
       Runtime: python2.7
-      CodeUri: temp-monitor/lambda/src/
-      Policies:
-        - CloudWatchPutMetricPolicy: {}
-      Events:
-        IoT:
-          Type: IoTRule
-          Properties:
-            AwsIotSqlVersion: 2016-03-23
-            Sql: "SELECT * FROM 'hem/temp'"
+      CodeUri: temp-monitor/rpi/src/
+      AutoPublishAlias: PROD
 
-  PowerIngestionFunction:
+  GGHEMPowerFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: main.handler
       Runtime: python2.7
-      CodeUri: power-monitor/lambda/src/
-      Policies:
-        - CloudWatchPutMetricPolicy: {}
-      Events:
-        IoT:
-          Type: IoTRule
-          Properties:
-            AwsIotSqlVersion: 2016-03-23
-            Sql: "SELECT * FROM 'hem/power'"
+      CodeUri: power-monitor/rpi/src/
+      AutoPublishAlias: PROD
+
+  GGHEMWaterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main.handler
+      Runtime: python2.7
+      CodeUri: water-monitor/rpi/src/
+      AutoPublishAlias: PROD
 
   #
-  # Alarm Subscription
+  # Greengrass Configuration
+  #   > Hem Core and Definition
+  #
+  HEMCore:
+    Type: AWS::IoT::Thing
+    Properties:
+      ThingName: HEMCore
+
+  HEMCoreDefinition:
+    Type: AWS::Greengrass::CoreDefinition
+    Properties:
+      Name: HEMCoreDefinition
+
+  HEMCoreDefinitionVersion:
+    Type: AWS::Greengrass::CoreDefinitionVersion
+    Properties:
+      CoreDefinitionId: !Ref HEMCoreDefinition
+      Cores:
+        - Id: HEMCore
+          CertificateArn: !Ref CoreCertificateArn
+          SyncShadow: false
+          ThingArn: !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:thing/${HEMCore}'
+
+  #
+  # Greengrass Configuration
+  #   > Function Configurations
+  #
+  HEMFunctionDefinition:
+    Type: AWS::Greengrass::FunctionDefinition
+    Properties:
+      Name: HEMFunctionDefinition
+
+  HEMFunctionDefinitionVersion:
+    Type: AWS::Greengrass::FunctionDefinitionVersion
+    Properties:
+      FunctionDefinitionId: !GetAtt HEMFunctionDefinition.Id
+      DefaultConfig:
+        Execution:
+          IsolationMode: GreengrassContainer
+      Functions:
+        - Id: HEMPowerFunction
+          FunctionArn: !Ref GGHEMPowerFunction.Alias
+          FunctionConfiguration:
+            Pinned: "true"
+            MemorySize: 128000
+            Timeout: 20
+            Environment:
+              AccessSysfs: "true"
+#              Execution:
+#                IsolationModenMode: NoContainer    # TODO: See if we can put this in a container
+              Variables:
+                BT_ADDRESS: !Ref BTAddress
+        - Id: HEMTempFunction
+          FunctionArn: !Ref GGHEMTempFunction.Alias
+          FunctionConfiguration:
+            Pinned: true
+            MemorySize: 128000
+            Timeout: 20
+            Environment:
+              AccessSysfs: true
+              Variables:
+                SENSOR_TOP_ID: !Ref TempTopSensorAddr
+                SENSOR_MIDDLE_ID: !Ref TempMiddleSensorAddr
+                SENSOR_BOTTOM_ID: !Ref TempBottomSensorAddr
+                POLL_DELAY: !Ref TempPollDelay
+        - Id: HEMWaterFunction
+          FunctionArn: !Ref GGHEMWaterFunction.Alias
+          FunctionConfiguration:
+            Pinned: true
+            MemorySize: 128000
+            Timeout: 20
+            Environment:
+              AccessSysfs: false
+              Variables:
+                POLL_DELAY: !Ref WaterPollDelay
+                MODBUS_HOST: !Ref WaterModbusHost
+                WATER_METER_K: !Ref WaterMeterK
+
+  #
+  # Greengrass Configuration
+  #   > Logger Configurations
+  #
+  HEMLoggerDefinition:
+    Type: AWS::Greengrass::LoggerDefinition
+    Properties:
+      Name: HEMLoggerDefinition
+
+  HEMLoggerDefinitionVersion:
+    Type: AWS::Greengrass::LoggerDefinitionVersion
+    Properties:
+      LoggerDefinitionId: !Ref HEMLoggerDefinition
+      Loggers:
+        - Id: HEMLogger
+          Type: AWSCloudWatch
+          Component: GreengrassSystem
+          Level: INFO
+
+  #
+  # Greengrass Configuration
+  #   > Resource Configurations
+  #
+#  HEMResourceDefinition:
+#    Type: AWS::Greengrass::ResourceDefinition
+#    Properties:
+#      Name: HEMResourceDefinition
+
+
+  #
+  # Greengrass Configuration
+  #   > Subscription Configurations
+  #
+  HEMSubscriptionDefinition:
+    Type: AWS::Greengrass::SubscriptionDefinition
+    Properties:
+      Name: HEMSubscriptionDefinition
+
+  HEMSubscriptionDefinitionVersion:
+    Type: AWS::Greengrass::SubscriptionDefinitionVersion
+    Properties:
+      SubscriptionDefinitionId: !Ref HEMSubscriptionDefinition
+      Subscriptions:
+        - Id: HEMPowerToCW
+          Source: !Ref GGHEMPowerFunction.Alias
+          Subject: 'cloudwatch/metric/put'
+          Target: !Sub 'arn:aws:greengrass:${AWS::Region}::/connectors/CloudWatchMetrics/versions/1'
+        - Id: HEMTempCW
+          Source: !Ref GGHEMTempFunction.Alias
+          Subject: 'cloudwatch/metric/put'
+          Target: !Sub 'arn:aws:greengrass:${AWS::Region}::/connectors/CloudWatchMetrics/versions/1'
+        - Id: HEMWaterToCW
+          Source: !Ref GGHEMWaterFunction.Alias
+          Subject: 'cloudwatch/metric/put'
+          Target: !Sub 'arn:aws:greengrass:${AWS::Region}::/connectors/CloudWatchMetrics/versions/1'
+
+  #
+  # Greengrass Configuration
+  #   > Connector
+  #
+  HEMConnectorDefinition:
+    Type: AWS::Greengrass::ConnectorDefinition
+    Properties:
+      Name: HEMConnectorDefinition
+
+  HEMConnectorDefinitionVersion:
+    Type: AWS::Greengrass::ConnectorDefinitionVersion
+    Properties:
+      ConnectorDefinitionId: !Ref HEMConnectorDefinition
+      Connectors:
+        - Id: CWConnector
+          ConnectorArn: !Sub 'arn:aws:greengrass:${AWS::Region}::/connectors/CloudWatchMetrics/versions/1'
+          Parameters:
+            PublishInterval: 30
+            PublishRegion: !Ref AWS::Region
+            MemorySize: 128
+            MaxMetricsToRetain: 200
+
+  #
+  # Greengrass Configuration
+  #   > Group Role and Configurations
+  #
+  HEMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "greengrass.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: "*"
+              - Effect: "Allow"
+                Action:
+                  - logs:PutLogEvents
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:DescribeLogStreams
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/greengrass/*"
+
+  HEMGroup:
+    Type: AWS::Greengrass::Group
+    Properties:
+      Name: HEMGroup
+      RoleArn: !GetAtt HEMRole.Arn
+      InitialVersion:
+        CoreDefinitionVersionArn: !Ref HEMCoreDefinitionVersion
+        FunctionDefinitionVersionArn: !Ref HEMFunctionDefinitionVersion
+        SubscriptionDefinitionVersionArn: !Ref HEMSubscriptionDefinitionVersion
+        ConnectorDefinitionVersionArn: !Ref HEMConnectorDefinitionVersion
+        LoggerDefinitionVersionArn: !Ref HEMLoggerDefinitionVersion
+
+
+  #
+  # Alarm Subscription for No Data Alarms
   #
   SNSTopic:
     Type: AWS::SNS::Topic
@@ -52,9 +291,6 @@ Resources:
         - Endpoint: !Ref NotificationEmail
           Protocol: email
 
-  #
-  # No data Alarms
-  #
   TempMissingDataAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:

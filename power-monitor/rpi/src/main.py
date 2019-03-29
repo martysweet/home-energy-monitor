@@ -2,11 +2,12 @@ import bluetooth
 import time
 import json
 import greengrasssdk
+import os
 
 gg_client = greengrasssdk.client('iot-data')
 
 # Target BT Address
-target_bt_addr = "98:D3:31:F5:C0:FA" # TODO ENVVAR
+target_bt_addr = os.environ['BT_ADDRESS']
 
 # CloudWatch Configuration
 cw_payload_field_mappings = {
