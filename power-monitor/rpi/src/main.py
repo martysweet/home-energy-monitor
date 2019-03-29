@@ -1,12 +1,38 @@
 import bluetooth
 import time
 import json
+import greengrasssdk
 
+gg_client = greengrasssdk.client('iot-data')
 
-mess_buff_count = 0         # When a bluetooth buffer is filled
-mess_succ_count = 0         # When a message is successfully parsed as JSON
-mess_invalid_count = 0      # When a message is invalid JSON
-blueth_conn_attempts = 0    # For each time a Bluetooth connection is attempted
+# Target BT Address
+target_bt_addr = "98:D3:31:F5:C0:FA" # TODO ENVVAR
+
+# CloudWatch Configuration
+cw_payload_field_mappings = {
+    'i1':   'Grid',
+    'i2':   'Solar',
+    'i3':   'WaterImmersion',
+    'i4':   'ASHP',
+    'i5':   'BufferImmersion',
+    'Vrms': 'Voltage'
+}
+
+cw_dimensions = [
+    {
+        'Name':     'Device',
+        'Value':    'EnergyMonitor'
+    },
+]
+
+cw_namespace = 'House/Monitoring'
+cw_topic = 'cloudwatch/metric/put'
+
+# Debug Counters
+mess_buff_count = 0                 # When a bluetooth buffer is filled
+mess_succ_count = 0                 # When a message is successfully parsed as JSON
+mess_invalid_count = 0              # When a message is invalid JSON
+blueth_conn_attempts = 0            # For each time a Bluetooth connection is attempted
 
 
 def lambda_handler(event, context):
@@ -26,7 +52,7 @@ def handle_mesg(msg):
 
     # Check this is valid JSON
     try:
-        json.loads(msg)
+        ard_resp = json.loads(msg)
     except Exception:
         print("Invalid JSON - Possibly faulty transmission.")
         mess_invalid_count += 1
@@ -36,15 +62,35 @@ def handle_mesg(msg):
     mess_succ_count += 1
     print("Sending to IOT: {}".format(msg))
 
+    # For every configured field, publish the metric directly
+    send_metrics_from_dict(ard_resp)
+
+
+def send_metrics_from_dict(d):
+    for f in cw_payload_field_mappings:
+        val = d.get(f, None)
+        if val is not None:
+            payload = {
+                "request": {
+                    "namespace": cw_namespace,
+                    "metricData": {
+                        "metricName": cw_payload_field_mappings[f],
+                        "dimensions": cw_dimensions,
+                        "value": val,
+                        "timestamp": time.time()
+                    }
+                }
+            }
+            # Publish to connector
+            gg_client.publish(topic=cw_topic, payload=json.dumps(payload))
+
 
 def connect_bluetooth():
     global mess_buff_count
     # Connection Details
-    target_addr = "98:D3:31:F5:C0:FA" # TODO ENVVAR
-
     port = 1
     sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-    sock.connect((target_addr, port))
+    sock.connect((target_bt_addr, port))
     print('Connected')
 
     try:

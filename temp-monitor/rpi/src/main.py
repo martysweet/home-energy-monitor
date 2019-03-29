@@ -2,13 +2,43 @@ import os
 import time
 import json
 import subprocess
+import greengrasssdk
+
+gg_client = greengrasssdk.client('iot-data')
 
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
-
 base_dir = '/sys/bus/w1/devices/'
-sensors = {"top": "28-01142fed9cbf", "middle": "28-01143019315f", "bottom": "28-02131ab8bdaa"}
+
 # TODO: Make sensors a deployment string for reusability
+poll_delay = 60
+sensors = {
+    "top":      "28-01142fed9cbf",
+    "middle":   "28-01143019315f",
+    "bottom":   "28-02131ab8bdaa"
+}
+
+# CloudWatch Configuration
+cw_payload_field_mappings = {
+    'top':      'HeatstoreTop',
+    'middle':   'HeatstoreMiddle',
+    'bottom':   'HeatstoreBottom'
+}
+
+cw_dimensions = [
+    {
+        'Name': 'Device',
+        'Value': 'Heatstore'
+    },
+]
+
+cw_namespace = 'House/Monitoring'
+cw_topic = 'cloudwatch/metric/put'
+
+
+def lambda_handler(event, context):
+    print("Lambda handler called.")
+    return True
 
 
 def read_temp_raw(device_file):
@@ -31,25 +61,42 @@ def read_temp(sensor_id):
         return temp_c
 
 
-def lambda_handler(event, context):
-    pass
+def send_metrics_from_dict(d):
+    for f in cw_payload_field_mappings:
+        val = d.get(f, None)
+        if val is not None:
+            payload = {
+                "request": {
+                    "namespace": cw_namespace,
+                    "metricData": {
+                        "metricName": cw_payload_field_mappings[f],
+                        "dimensions": cw_dimensions,
+                        "value": val,
+                        "timestamp": time.time()
+                    }
+                }
+            }
+            # Publish to connector
+            gg_client.publish(topic=cw_topic, payload=json.dumps(payload))
 
-# TODO: Make an envvar
-topic = "/heating/temp"
 
+def read_sensors():
+    while True:
+
+        # Read top/middle/bottom sensors
+        output = {}
+        for key in sensors:
+            output[key] = read_temp(sensors[key])
+
+        # Send the metrics off, for top/middle/bottom
+        send_metrics_from_dict(output)
+
+        # Sleep until we try again
+        time.sleep(poll_delay)
+
+# Run forever
 while True:
-
-    output = {}
-
-    for key in sensors:
-        output[key] = read_temp(sensors[key])
-
-    messageJson = json.dumps(output)
-
     try:
-        # TODO: Send message using greengrass
-        pass
-    except:
-        print("Could not send message")
-
-    time.sleep(60)
+        read_sensors()
+    except Exception as e:
+        print("Failed reading sensors, will retry: {}".format(e))
