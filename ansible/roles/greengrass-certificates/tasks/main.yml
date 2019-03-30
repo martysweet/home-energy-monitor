@@ -9,15 +9,22 @@
     path: /greengrass/certs
     state: directory
 
-- name: Copy root-CA file
+- name: Get root-CA file
   get_url:
     url: https://www.amazontrust.com/repository/AmazonRootCA1.pem
     dest: /greengrass/certs/root.ca.pem
 
-- name: Extract certificates
-  unarchive:
-    src: certificates/{{ target_hostname }}.zip
-    dest: /greengrass/certs
+- name: Copy Certificate
+  copy:
+    src: certificates/{{ certificate_id }}-certificate.pem.crt
+    dest: /greengrass/certs/{{ certificate_id }}-certificate.pem.crt
+    group: root
+    owner: root
+
+- name: Copy private key
+  copy:
+    src: certificates/{{ certificate_id }}-private.pem.key
+    dest: /greengrass/certs/{{ certificate_id }}-private.pem.key
     group: root
     owner: root
 

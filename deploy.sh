@@ -4,9 +4,16 @@ set -e
 # Import custom variables
 source env.sh
 
+# Build the functions with dependancies --use-container \
+echo "If the next follows, setup a virtual environment for Python 2.7"
+echo "Ensure libbluetooth-dev is installed for pybluez compilation"
+sam build \
+    --template template.yaml \
+    --profile ${AWS_PROFILE}
+
 # Deploy the functions
-aws cloudformation package \
-    --template-file template.yaml \
+sam package \
+    --template-file .aws-sam/build/template.yaml \
     --s3-bucket ${DEPLOYMENT_BUCKET} \
     --output-template-file packaged-template.yaml \
     --profile ${AWS_PROFILE}
@@ -24,5 +31,5 @@ aws cloudformation deploy --template-file packaged-template.yaml \
     --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
     --profile ${AWS_PROFILE}
 
-
-rm packaged-template.yaml
+#rm packaged-template.yaml
+#rm -rf .aws-sam/*

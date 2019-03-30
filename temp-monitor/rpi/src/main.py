@@ -6,8 +6,6 @@ import greengrasssdk
 
 gg_client = greengrasssdk.client('iot-data')
 
-os.system('modprobe w1-gpio')
-os.system('modprobe w1-therm')
 base_dir = '/sys/bus/w1/devices/'
 
 # TODO: Make sensors a deployment string for reusability

@@ -2,12 +2,9 @@
 Your Greengrass certificates should be placed in this directory for
 automatic deployment via Ansible.
 
-ZIP the certificates as follows, assuming the RPI target hostname is 'energy-monitor'.
+Add the files you downloaded from the AWS IoT console, using their normal file name, for example:
 
-```
-energy-monitor.zip
-    - energy-monitor.private.key
-    - energy-monitor.cert.pem
-```
+- 75e4768f1d-certificate.pem.crt
+- 75e4768f1d-private.pem.key
 
 These will then be deployed within the `greengrass-certificates` ansible role.

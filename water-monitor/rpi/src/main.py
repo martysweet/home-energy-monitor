@@ -32,7 +32,7 @@ def read_values():
 
     while True:
 
-        new_value = c.read_holding_registers(43, 1)[0]
+        new_value = int(c.read_holding_registers(43, 1)[0])
         print("New Value: {}".format(new_value))
 
         if old_value == -1:
@@ -49,7 +49,7 @@ def read_values():
         old_value = new_value
 
         # Push to CloudWatch, even if the value is 0
-        litres = diff * k
+        litres = diff * float(k)
         payload = {
             "request": {
                 "namespace": cw_namespace,

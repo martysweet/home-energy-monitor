@@ -20,3 +20,6 @@ IOT_DATA_ENDPOINT="abcdefg-ats.iot.eu-west-1.amazonaws.com"
 # The greengrass endpoint for communication.
 # > iot_greengrass_endpoint
 IOT_GREENGRASS_ENDPOINT="greengrass-ats.iot.eu-west-1.amazonaws.com"
+
+# The certificate ID (name of the certificates)
+IOT_CERT_ID="75e4768f1d"

@@ -15,11 +15,11 @@
   "crypto" : {
     "principals" : {
       "SecretsManager" : {
-        "privateKeyPath" : "file:///greengrass/certs/{{ target_hostname }}.private.key"
+        "privateKeyPath" : "file:///greengrass/certs/{{ certificate_id }}-private.pem.key"
       },
       "IoTCertificate" : {
-        "privateKeyPath" : "file:///greengrass/certs/{{ target_hostname }}.private.key",
-        "certificatePath" : "file:///greengrass/certs/{{ target_hostname }}.cert.pem"
+        "privateKeyPath" : "file:///greengrass/certs/{{ certificate_id }}-private.pem.key",
+        "certificatePath" : "file:///greengrass/certs/{{ certificate_id }}-certificate.pem.crt"
       }
     },
     "caPath" : "file:///greengrass/certs/root.ca.pem"

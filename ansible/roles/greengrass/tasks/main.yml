@@ -27,9 +27,15 @@
     src: greengrass.service
     dest: /lib/systemd/system/greengrass.service
 
+- name: Download Greengrass
+  get_url:
+    url: https://d1onfpft10uf5o.cloudfront.net/greengrass-core/downloads/1.8.0/greengrass-linux-armv7l-1.8.0.tar.gz
+    dest: /tmp/greengrass.tar.gz
+
 - name: Extract greengrass to /greengrass
   unarchive:
-    src: greengrass-linux-armv7l-1.7.0.tar.gz
+    src: /tmp/greengrass.tar.gz
+    remote_src: yes
     dest: /
     group: root
     owner: root

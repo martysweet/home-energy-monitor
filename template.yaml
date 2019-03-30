@@ -80,14 +80,74 @@ Resources:
       AutoPublishAlias: PROD
 
   #
-  # Greengrass Configuration
-  #   > Hem Core and Definition
+  # IOT Resources
   #
   HEMCore:
     Type: AWS::IoT::Thing
     Properties:
-      ThingName: HEMCore
+      ThingName: HEMCore # TODO Make parameter
 
+  HEMIOTPolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action: "iot:Connect"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+              - "iot:Publish"
+              - "iot:Subscribe"
+              - "iot:Receive"
+            Resource:
+              - !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topicfilter/$aws/things/${HEMCore}-*"
+              - !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/$aws/things/${HEMCore}-*"
+              - !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topicfilter/$aws/things/${HEMCore}/*"
+              - !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/$aws/things/${HEMCore}/*"
+          - Effect: "Allow"
+            Action:
+              - "iot:GetThingShadow"
+              - "iot:UpdateThingShadow"
+              - "iot:DeleteThingShadow"
+            Resource: !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:thing/${HEMCore}-*"
+          - Effect: "Allow"
+            Action:
+              - "greengrass:AssumeRoleForGroup"
+              - "greengrass:CreateCertificate"
+            Resource: "*"
+          - Effect: "Allow"
+            Action:
+              - "greengrass:GetDeployment"
+              - "greengrass:GetDeploymentArtifacts"
+            Resource: !Sub "arn:aws:greengrass:${AWS::Region}:${AWS::AccountId}:/greengrass/groups/${HEMGroup.Id}/deployments/*"
+          - Effect: "Allow"
+            Action: "greengrass:UpdateCoreDeploymentStatus"
+            Resource: !Sub "arn:aws:greengrass:${AWS::Region}:${AWS::AccountId}:/greengrass/groups/${HEMGroup.Id}/deployments/*/cores/arn%3Aaws%3Aiot%3A${AWS::Region}%3A${AWS::AccountId}%3Athing%2F${HEMCore}"
+          - Effect: "Allow"
+            Action:
+              - "greengrass:GetConnectivityInfo"
+              - "greengrass:UpdateConnectivityInfo"
+            Resource: !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:thing/${HEMCore}"
+
+
+  HEMCertificateAttachment:
+    Type: AWS::IoT::ThingPrincipalAttachment
+    Properties:
+      ThingName: !Ref HEMCore
+      Principal: !Ref CoreCertificateArn
+
+  HEMPolicyAttachment:
+    Type: AWS::IoT::PolicyPrincipalAttachment
+    Properties:
+      PolicyName: !Ref HEMIOTPolicy
+      Principal: !Ref CoreCertificateArn
+
+  #
+  # Greengrass Configuration
+  #   > Hem Core and Definition
+  #
   HEMCoreDefinition:
     Type: AWS::Greengrass::CoreDefinition
     Properties:
@@ -172,10 +232,14 @@ Resources:
     Properties:
       LoggerDefinitionId: !Ref HEMLoggerDefinition
       Loggers:
-        - Id: HEMLogger
+        - Id: HEMLoggerSystem
           Type: AWSCloudWatch
           Component: GreengrassSystem
           Level: INFO
+        - Id: HEMLoggerLambda
+          Type: AWSCloudWatch
+          Component: Lambda
+          Level: INFO # TODO Make param
 
   #
   # Greengrass Configuration
@@ -233,8 +297,8 @@ Resources:
           Parameters:
             PublishInterval: 30
             PublishRegion: !Ref AWS::Region
-            MemorySize: 128
-            MaxMetricsToRetain: 200
+            MemorySize: 128000
+            MaxMetricsToRetain: 2000
 
   #
   # Greengrass Configuration
