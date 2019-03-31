@@ -4,9 +4,7 @@ set -e
 # Import custom variables
 source env.sh
 
-# Build the functions with dependancies --use-container \
-echo "If the next follows, setup a virtual environment for Python 2.7"
-echo "Ensure libbluetooth-dev is installed for pybluez compilation"
+# Build the functions with dependencies
 sam build \
     --template template.yaml \
     --profile ${AWS_PROFILE}
@@ -18,18 +16,23 @@ sam package \
     --output-template-file packaged-template.yaml \
     --profile ${AWS_PROFILE}
 
-# See if the stack exists
+# See if the stack exists, create/update with parameters accordingly
+if aws cloudformation describe-stacks --stack-name ${STACK_NAME} --profile ${AWS_PROFILE} > /dev/null; then
+   aws cloudformation update-stack --stack-name ${STACK_NAME} \
+       --template-body file://packaged-template.yaml \
+       --parameters file://template-parameters.json \
+       --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
+       --profile ${AWS_PROFILE}
+else
+    aws cloudformation create-stack --stack-name ${STACK_NAME} \
+       --template-body file://packaged-template.yaml \
+       --parameters file://template-parameters.json \
+       --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
+       --profile ${AWS_PROFILE}
+fi
 
-#aws cloudformation create-stack --stack-name ${STACK_NAME} \
-#       --template-body file://packaged-template.yaml \
-#       --parameters file://template-parameters.json \
-#       --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
-#       --profile ${AWS_PROFILE}
 
-aws cloudformation deploy --template-file packaged-template.yaml \
-    --stack-name ${STACK_NAME} \
-    --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM \
-    --profile ${AWS_PROFILE}
 
-#rm packaged-template.yaml
-#rm -rf .aws-sam/*
+echo "Cleanup build resources"
+rm packaged-template.yaml
+rm -rf .aws-sam/*
