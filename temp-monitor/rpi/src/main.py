@@ -8,13 +8,16 @@ gg_client = greengrasssdk.client('iot-data')
 
 base_dir = '/sys/bus/w1/devices/'
 
-# TODO: Make sensors a deployment string for reusability
-poll_delay = os.environ['POLL_DELAY']
-sensors = {
-    "top":      os.environ['SENSOR_TOP_ID'],
-    "middle":   os.environ['SENSOR_MIDDLE_ID'],
-    "bottom":   os.environ['SENSOR_BOTTOM_ID']
-}
+# Environmental Variables
+try:
+    poll_delay = int(os.environ['POLL_DELAY'])
+    sensors = {
+        "top":      os.environ['SENSOR_TOP_ID'],
+        "middle":   os.environ['SENSOR_MIDDLE_ID'],
+        "bottom":   os.environ['SENSOR_BOTTOM_ID']
+    }
+except Exception as e:
+    print("Failed parsing environmental variables: {}".format(e))
 
 # CloudWatch Configuration
 cw_payload_field_mappings = {
@@ -25,8 +28,8 @@ cw_payload_field_mappings = {
 
 cw_dimensions = [
     {
-        'Name': 'Device',
-        'Value': 'Heatstore'
+        'name': 'Device',
+        'value': 'Heatstore'
     },
 ]
 
@@ -40,7 +43,8 @@ def lambda_handler(event, context):
 
 
 def read_temp_raw(device_file):
-    catdata = subprocess.Popen(['cat', device_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print("Attempting to read: {}".format(device_file))
+    catdata = subprocess.Popen(['/bin/cat', device_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = catdata.communicate()
     out_decode = out.decode('utf-8')
     lines = out_decode.split('\n')

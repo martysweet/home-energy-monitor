@@ -58,7 +58,7 @@ Resources:
   GGHEMTempFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: main.handler
+      Handler: main.lambda_handler
       Runtime: python2.7
       CodeUri: temp-monitor/rpi/src/
       AutoPublishAlias: PROD
@@ -66,7 +66,7 @@ Resources:
   GGHEMPowerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: main.handler
+      Handler: main.lambda_handler
       Runtime: python2.7
       CodeUri: power-monitor/rpi/src/
       AutoPublishAlias: PROD
@@ -74,7 +74,7 @@ Resources:
   GGHEMWaterFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: main.handler
+      Handler: main.lambda_handler
       Runtime: python2.7
       CodeUri: water-monitor/rpi/src/
       AutoPublishAlias: PROD
@@ -184,12 +184,11 @@ Resources:
           FunctionArn: !Ref GGHEMPowerFunction.Alias
           FunctionConfiguration:
             Pinned: "true"
-            MemorySize: 128000
             Timeout: 20
+            MemorySize: 128000
             Environment:
-              AccessSysfs: "true"
-#              Execution:
-#                IsolationModenMode: NoContainer    # TODO: See if we can put this in a container
+              Execution:
+                IsolationMode: GreengrassContainer # CF Bug: Change this to NoContainer after CF Update
               Variables:
                 BT_ADDRESS: !Ref BTAddress
         - Id: HEMTempFunction
@@ -236,10 +235,10 @@ Resources:
           Type: AWSCloudWatch
           Component: GreengrassSystem
           Level: INFO
-        - Id: HEMLoggerLambda
-          Type: AWSCloudWatch
-          Component: Lambda
-          Level: INFO # TODO Make param
+#        - Id: HEMLoggerLambda
+#          Type: AWSCloudWatch
+#          Component: Lambda
+#          Level: INFO # TODO Make param
 
   #
   # Greengrass Configuration
@@ -277,6 +276,10 @@ Resources:
           Source: !Ref GGHEMWaterFunction.Alias
           Subject: 'cloudwatch/metric/put'
           Target: !Sub 'arn:aws:greengrass:${AWS::Region}::/connectors/CloudWatchMetrics/versions/1'
+        - Id: CWDebug
+          Source: !Sub 'arn:aws:greengrass:${AWS::Region}::/connectors/CloudWatchMetrics/versions/1'
+          Subject: 'cloudwatch/metric/put/status'
+          Target: 'cloud'
 
   #
   # Greengrass Configuration
@@ -337,12 +340,16 @@ Resources:
     Properties:
       Name: HEMGroup
       RoleArn: !GetAtt HEMRole.Arn
-      InitialVersion:
-        CoreDefinitionVersionArn: !Ref HEMCoreDefinitionVersion
-        FunctionDefinitionVersionArn: !Ref HEMFunctionDefinitionVersion
-        SubscriptionDefinitionVersionArn: !Ref HEMSubscriptionDefinitionVersion
-        ConnectorDefinitionVersionArn: !Ref HEMConnectorDefinitionVersion
-        LoggerDefinitionVersionArn: !Ref HEMLoggerDefinitionVersion
+
+  HEMGroupVersion:
+    Type: AWS::Greengrass::GroupVersion
+    Properties:
+      GroupId: !GetAtt HEMGroup.Id
+      CoreDefinitionVersionArn: !Ref HEMCoreDefinitionVersion
+      FunctionDefinitionVersionArn: !Ref HEMFunctionDefinitionVersion
+      SubscriptionDefinitionVersionArn: !Ref HEMSubscriptionDefinitionVersion
+      ConnectorDefinitionVersionArn: !Ref HEMConnectorDefinitionVersion
+      LoggerDefinitionVersionArn: !Ref HEMLoggerDefinitionVersion
 
 
   #

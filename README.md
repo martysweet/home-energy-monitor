@@ -13,4 +13,11 @@ Power and Heat ingestion to AWS Cloud (using RPi and Ardiuno)
 # Temperature Monitor
 
 # Power Monitor
-`sudo apt-get install libbluetooth-dev`
+On the RPi, run the following
+
+TODO: ANSIBLE THIS
+
+```bash
+sudo apt-get install libbluetooth-dev
+pip install pybluez
+```

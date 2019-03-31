@@ -7,7 +7,10 @@ import os
 gg_client = greengrasssdk.client('iot-data')
 
 # Target BT Address
-target_bt_addr = os.environ['BT_ADDRESS']
+try:
+    target_bt_addr = os.environ['BT_ADDRESS']
+except Exception as e:
+    print("Failed parsing environmental variables: {}".format(e))
 
 # CloudWatch Configuration
 cw_payload_field_mappings = {
@@ -21,8 +24,8 @@ cw_payload_field_mappings = {
 
 cw_dimensions = [
     {
-        'Name':     'Device',
-        'Value':    'EnergyMonitor'
+        'name':     'Device',
+        'value':    'EnergyMonitor'
     },
 ]
 

@@ -75,9 +75,17 @@
   apt:
     name: python-pip
 
-- name: Install RPi.GPIO for Device Defender
+- name: Install Bluetooth Libs
+  apt:
+    name: libbluetooth-dev
+
+- name: Install RPi.GPIO for GPIO Output
   pip:
     name: 'RPi.GPIO'
+
+- name: Install pybluez for Bluetooth
+  pip:
+    name: pybluez
 
 - name: Install psutil for Device Defender
   pip:

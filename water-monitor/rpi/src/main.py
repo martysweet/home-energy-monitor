@@ -6,20 +6,24 @@ import os
 
 gg_client = greengrasssdk.client('iot-data')
 
-host = os.environ['MODBUS_HOST']
-poll_delay = os.environ['POLL_DELAY']
-k = os.environ['WATER_METER_K']     # Unit of the pulse meter, i.e. K=10L (Litres)
+try:
+    host = os.environ['MODBUS_HOST']
+    poll_delay = int(os.environ['POLL_DELAY'])
+    k = int(os.environ['WATER_METER_K'])     # Unit of the pulse meter, i.e. K=10L (Litres)
+except Exception as e:
+    print("Failed parsing environmental variables: {}".format(e))
 
 # Cloudwatch Configuration
 cw_dimensions = [
     {
-        'Name': 'Device',
-        'Value': 'WaterPulseMeter'
+        'name': 'Device',
+        'value': 'WaterPulseMeter'
     },
 ]
 
 cw_namespace = 'House/Monitoring'
 cw_topic = 'cloudwatch/metric/put'
+
 
 def lambda_handler(event, context):
     print("Lambda Handler Called.")
@@ -66,9 +70,6 @@ def read_values():
 
         time.sleep(poll_delay)
 
-# Run forever
-while True:
-    try:
-        read_values()
-    except Exception as e:
-        print("Exception when reading values, retrying. {}".format(e))
+
+# Run, let the GG ENV, restart on failure
+read_values()
