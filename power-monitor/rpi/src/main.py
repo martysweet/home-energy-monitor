@@ -19,17 +19,10 @@ cw_payload_field_mappings = {
     'i3':   'WaterImmersion',
     'i4':   'ASHP',
     'i5':   'BufferImmersion',
-    'Vrms': 'Voltage'
+  #  'Vrms': 'Voltage'
 }
 
-cw_dimensions = [
-    {
-        'name':     'Device',
-        'value':    'EnergyMonitor'
-    },
-]
-
-cw_namespace = 'House/Monitoring'
+cw_namespace = 'House/Monitoring/Electricity'
 cw_topic = 'cloudwatch/metric/put'
 
 # Debug Counters
@@ -78,15 +71,49 @@ def send_metrics_from_dict(d):
                 "request": {
                     "namespace": cw_namespace,
                     "metricData": {
-                        "metricName": cw_payload_field_mappings[f],
-                        "dimensions": cw_dimensions,
-                        "value": val,
+                        "metricName": "Power",
+                        "dimensions": [
+                            {
+                                'name': 'Device',
+                                'value': 'PowerMonitor'
+                            },
+                            {
+                                'name': 'Circuit',
+                                'value': cw_payload_field_mappings[f]
+                            }
+                        ],
+                        "value": float(val),
                         "timestamp": time.time()
                     }
                 }
             }
             # Publish to connector
             gg_client.publish(topic=cw_topic, payload=json.dumps(payload))
+
+    # Send voltage
+    payload = {
+        "request": {
+            "namespace": cw_namespace,
+            "metricData": {
+                "metricName": "Voltage",
+                "dimensions": [
+                    {
+                        'name': 'Device',
+                        'value': 'PowerMonitor'
+                    },
+                    {
+                        'name': 'Circuit',
+                        'value': cw_payload_field_mappings['i1']
+                    }
+                ],
+                "value": float(d.get('Vrms')),
+                "timestamp": time.time()
+            }
+        }
+    }
+
+    # Publish to connector
+    gg_client.publish(topic=cw_topic, payload=json.dumps(payload))
 
 
 def connect_bluetooth():

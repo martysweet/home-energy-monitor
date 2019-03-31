@@ -15,16 +15,23 @@ via the CloudWatch metric connector.
 Buffered Voltage Schematic: https://learn.openenergymonitor.org/electricity-monitoring/ctac/acac-buffered-voltage-bias
 
 
-## Temperature Monitor
+## Heatstore Monitor
 The RPi is connected to 3 one-wire sensors, which are each located within temperature probe locations
 within a Heat Store water unit. The sensors are polled periodically, before the metrics are sent to the 
 CloudWatch metric connector.
+
+`dtoverlay=w1-gpio` was added to the bottom of /boot/config.txt (TODO: Implement in Ansible). 
 
 ## Water Monitor
 The water monitor runs the on RPi and calls a remote Modbus server (Crouzet EM4), which keeps
 a counter based on a pulse water meter, where each pulse represents 10 Litres of water 
 usage. The Water Monitor calculates the difference between the current and previous
 reading before posting the difference to CloudWatch metrics.
+
+## Heating Monitor
+This code interfaces with the Heatmiser NeoHub API to collect data regarding room temperature, and if the 
+heating is currently active in a specific zone. Publishing metrics to the CloudWatch connector.
+Inspired from https://github.com/RJ/heatmiser-neohub.py, this implemention is simplified just to pull out each device's basic information.
 
 # Getting Started
 ## Step 1 - Deploying CloudFormation

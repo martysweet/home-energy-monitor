@@ -16,24 +16,24 @@ Parameters:
     Description: Bluetooth MAC for Power Monitor
     Default: "98:D3:31:F5:C0:FA"
 
-  TempTopSensorAddr:
+  HeatstoreTopSensorAddr:
     Type: String
     Description: Top Sensor ID for One-Wire
     Default: "28-01142fed9cbf"
 
-  TempMiddleSensorAddr:
+  HeatstoreMiddleSensorAddr:
     Type: String
     Description: Middle Sensor ID for One-Wire
     Default: "28-01143019315f"
 
-  TempBottomSensorAddr:
+  HeatstoreBottomSensorAddr:
     Type: String
     Description: Bottom Sensor ID for One-Wire
     Default: "28-02131ab8bdaa"
 
-  TempPollDelay:
+  HeatstorePollDelay:
     Type: String
-    Description: Poll Delay for Temp Gathering
+    Description: Poll Delay for Heatstore Gathering
     Default: 60
 
   WaterPollDelay:
@@ -50,17 +50,26 @@ Parameters:
     Description: Water litre multipler for a pulse meter
     Default: 10
 
+  HeatingNeoHubHost:
+    Type: String
+    Description: Host for NeoHub Hub JSON 4747 communication
+
+  HeatingPollDelay:
+    Type: String
+    Description: Poll Delay for Heating Gathering
+    Default: 60
+
 Resources:
 
   #
   # Ingestion Functions which run on the Greengrass Core
   #
-  GGHEMTempFunction:
+  GGHEMHeatstoreFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: main.lambda_handler
       Runtime: python2.7
-      CodeUri: temp-monitor/rpi/src/
+      CodeUri: heatstore-monitor/rpi/src/
       AutoPublishAlias: PROD
 
   GGHEMPowerFunction:
@@ -77,6 +86,14 @@ Resources:
       Handler: main.lambda_handler
       Runtime: python2.7
       CodeUri: water-monitor/rpi/src/
+      AutoPublishAlias: PROD
+
+  GGHEMHeatingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main.lambda_handler
+      Runtime: python2.7
+      CodeUri: heating-monitor/rpi/src/
       AutoPublishAlias: PROD
 
   #
@@ -191,8 +208,8 @@ Resources:
                 IsolationMode: GreengrassContainer # CF Bug: Change this to NoContainer after CF Update
               Variables:
                 BT_ADDRESS: !Ref BTAddress
-        - Id: HEMTempFunction
-          FunctionArn: !Ref GGHEMTempFunction.Alias
+        - Id: HEMHeatstoreFunction
+          FunctionArn: !Ref GGHEMHeatstoreFunction.Alias
           FunctionConfiguration:
             Pinned: true
             MemorySize: 128000
@@ -200,10 +217,10 @@ Resources:
             Environment:
               AccessSysfs: true
               Variables:
-                SENSOR_TOP_ID: !Ref TempTopSensorAddr
-                SENSOR_MIDDLE_ID: !Ref TempMiddleSensorAddr
-                SENSOR_BOTTOM_ID: !Ref TempBottomSensorAddr
-                POLL_DELAY: !Ref TempPollDelay
+                SENSOR_TOP_ID: !Ref HeatstoreTopSensorAddr
+                SENSOR_MIDDLE_ID: !Ref HeatstoreMiddleSensorAddr
+                SENSOR_BOTTOM_ID: !Ref HeatstoreBottomSensorAddr
+                POLL_DELAY: !Ref HeatstorePollDelay
         - Id: HEMWaterFunction
           FunctionArn: !Ref GGHEMWaterFunction.Alias
           FunctionConfiguration:
@@ -216,6 +233,17 @@ Resources:
                 POLL_DELAY: !Ref WaterPollDelay
                 MODBUS_HOST: !Ref WaterModbusHost
                 WATER_METER_K: !Ref WaterMeterK
+        - Id: HEMHeatingFunction
+          FunctionArn: !Ref GGHEMHeatingFunction.Alias
+          FunctionConfiguration:
+            Pinned: true
+            MemorySize: 128000
+            Timeout: 20
+            Environment:
+              AccessSysfs: false
+              Variables:
+                POLL_DELAY: !Ref HeatingPollDelay
+                NEOHUB_HOST: !Ref HeatingNeoHubHost
 
   #
   # Greengrass Configuration
@@ -240,15 +268,6 @@ Resources:
 #          Component: Lambda
 #          Level: INFO # TODO Make param
 
-  #
-  # Greengrass Configuration
-  #   > Resource Configurations
-  #
-#  HEMResourceDefinition:
-#    Type: AWS::Greengrass::ResourceDefinition
-#    Properties:
-#      Name: HEMResourceDefinition
-
 
   #
   # Greengrass Configuration
@@ -268,12 +287,16 @@ Resources:
           Source: !Ref GGHEMPowerFunction.Alias
           Subject: 'cloudwatch/metric/put'
           Target: !Sub 'arn:aws:greengrass:${AWS::Region}::/connectors/CloudWatchMetrics/versions/1'
-        - Id: HEMTempCW
-          Source: !Ref GGHEMTempFunction.Alias
+        - Id: HEMHeatstoreCW
+          Source: !Ref GGHEMHeatstoreFunction.Alias
           Subject: 'cloudwatch/metric/put'
           Target: !Sub 'arn:aws:greengrass:${AWS::Region}::/connectors/CloudWatchMetrics/versions/1'
         - Id: HEMWaterToCW
           Source: !Ref GGHEMWaterFunction.Alias
+          Subject: 'cloudwatch/metric/put'
+          Target: !Sub 'arn:aws:greengrass:${AWS::Region}::/connectors/CloudWatchMetrics/versions/1'
+        - Id: HEMHeatingToCW
+          Source: !Ref GGHEMHeatingFunction.Alias
           Subject: 'cloudwatch/metric/put'
           Target: !Sub 'arn:aws:greengrass:${AWS::Region}::/connectors/CloudWatchMetrics/versions/1'
         - Id: CWDebug
@@ -377,7 +400,7 @@ Resources:
           Value: Heatstore
       EvaluationPeriods: 1
       MetricName: HeatstoreTop
-      Namespace: House/Monitoring
+      Namespace: House/Monitoring #TODO FIX
       Period: 300
       Statistic: SampleCount
       Threshold: 2
@@ -398,7 +421,7 @@ Resources:
           Value: PowerMonitor
       EvaluationPeriods: 1
       MetricName: Grid
-      Namespace: House/Monitoring
+      Namespace: House/Monitoring #TODO FIX
       Period: 300
       Statistic: SampleCount
       Threshold: 2

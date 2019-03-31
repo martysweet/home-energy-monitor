@@ -14,14 +14,7 @@ except Exception as e:
     print("Failed parsing environmental variables: {}".format(e))
 
 # Cloudwatch Configuration
-cw_dimensions = [
-    {
-        'name': 'Device',
-        'value': 'WaterPulseMeter'
-    },
-]
-
-cw_namespace = 'House/Monitoring'
+cw_namespace = 'House/Monitoring/Water'
 cw_topic = 'cloudwatch/metric/put'
 
 
@@ -58,8 +51,17 @@ def read_values():
             "request": {
                 "namespace": cw_namespace,
                 "metricData": {
-                    "metricName": "WaterUsageLitres",
-                    "dimensions": cw_dimensions,
+                    "metricName": "UsageLitres",
+                    "dimensions": [
+                        {
+                            'name': 'Device',
+                            'value': 'WaterPulseMeter'
+                        },
+                        {
+                            'name': 'Supply',
+                            'value': 'Mains'
+                        },
+                    ],
                     "value": litres,
                     "timestamp": time.time()
                 }

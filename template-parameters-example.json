@@ -12,19 +12,19 @@
     "ParameterValue": "EMAIL"
   },
   {
-    "ParameterKey": "TempBottomSensorAddr",
+    "ParameterKey": "HeatstoreBottomSensorAddr",
     "ParameterValue": "28-02131ab8bdaa"
   },
   {
-    "ParameterKey": "TempMiddleSensorAddr",
+    "ParameterKey": "HeatstoreMiddleSensorAddr",
     "ParameterValue": "28-01143019315f"
   },
   {
-    "ParameterKey": "TempPollDelay",
+    "ParameterKey": "HeatstorePollDelay",
     "ParameterValue": "60"
   },
   {
-    "ParameterKey": "TempTopSensorAddr",
+    "ParameterKey": "HeatstoreTopSensorAddr",
     "ParameterValue": "28-01142fed9cbf"
   },
   {
@@ -37,6 +37,14 @@
   },
   {
     "ParameterKey": "WaterPollDelay",
+    "ParameterValue": "60"
+  },
+  {
+    "ParameterKey": "HeatingNeoHubHost",
+    "ParameterValue": "192.168.1.7"
+  },
+  {
+    "ParameterKey": "HeatingPollDelay",
     "ParameterValue": "60"
   }
 ]

@@ -18,22 +18,16 @@ try:
     }
 except Exception as e:
     print("Failed parsing environmental variables: {}".format(e))
+    raise
 
 # CloudWatch Configuration
 cw_payload_field_mappings = {
-    'top':      'HeatstoreTop',
-    'middle':   'HeatstoreMiddle',
-    'bottom':   'HeatstoreBottom'
+    'top':      'Top',
+    'middle':   'Middle',
+    'bottom':   'Bottom'
 }
 
-cw_dimensions = [
-    {
-        'name': 'Device',
-        'value': 'Heatstore'
-    },
-]
-
-cw_namespace = 'House/Monitoring'
+cw_namespace = 'House/Monitoring/Heatstore'
 cw_topic = 'cloudwatch/metric/put'
 
 
@@ -71,9 +65,18 @@ def send_metrics_from_dict(d):
                 "request": {
                     "namespace": cw_namespace,
                     "metricData": {
-                        "metricName": cw_payload_field_mappings[f],
-                        "dimensions": cw_dimensions,
-                        "value": val,
+                        "metricName": "Temperature",
+                        "dimensions": [
+                            {
+                                'name': 'Device',
+                                'value': 'Heatstore'
+                            },
+                            {
+                                'name': 'Probe',
+                                'value': cw_payload_field_mappings[f]
+                            },
+                        ],
+                        "value": float(val),
                         "timestamp": time.time()
                     }
                 }
