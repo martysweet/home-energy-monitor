@@ -97,7 +97,8 @@ def read_sensors():
         send_metrics_from_dict(output)
 
         # Sleep until we try again
-        time.sleep(poll_delay)
+        time.sleep(poll_delay)  # TODO: This is majorly affected by drift, caused by the
+                                # TODO: delay it takes to read_temp. Need to use a scheduler here.
 
 # Run forever
 while True:
